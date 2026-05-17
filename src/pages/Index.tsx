@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Terminal, Crosshair, Zap, Radio, History, ArrowLeftRight, Trash2, Download, FileJson, FileSpreadsheet, FileCode, File, FileText } from 'lucide-react';
+import { Terminal, Crosshair, Zap, Radio, History, ArrowLeftRight, Trash2, Download, FileJson, FileSpreadsheet, FileCode, File, FileText, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import ScanProgress from '@/components/ScanProgress';
 import ScanReport from '@/components/ScanReport';
 import ScanSkeleton from '@/components/ScanSkeleton';
 import ScanComparison from '@/components/ScanComparison';
+import ScheduleSettings from '@/components/ScheduleSettings';
 import { type ScanResult, SCAN_PHASES } from '@/lib/scanner-data';
 import { performRealScan } from '@/lib/scanner-api';
 import { saveScan, getHistory, clearHistory, type StoredScan } from '@/lib/scan-history';
@@ -26,6 +27,7 @@ const Index = () => {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const [showSchedules, setShowSchedules] = useState(false);
   const [history, setHistory] = useState<StoredScan[]>([]);
   const [compareMode, setCompareMode] = useState(false);
   const [compareScans, setCompareScans] = useState<[ScanResult | null, ScanResult | null]>([null, null]);
@@ -48,6 +50,7 @@ const Index = () => {
     setResult(null);
     setErrorMsg('');
     setShowHistory(false);
+    setShowSchedules(false);
     setCompareMode(false);
 
     try {
@@ -75,6 +78,14 @@ const Index = () => {
   const openHistory = () => {
     setHistory(getHistory());
     setShowHistory(true);
+    setShowSchedules(false);
+    setCompareMode(false);
+    setCompareScans([null, null]);
+  };
+
+  const openSchedules = () => {
+    setShowSchedules(true);
+    setShowHistory(false);
     setCompareMode(false);
     setCompareScans([null, null]);
   };
@@ -113,6 +124,13 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-5">
             <button
+              onClick={openSchedules}
+              className="flex items-center gap-2 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-md hover:bg-secondary border border-transparent hover:border-border"
+            >
+              <CalendarClock className="w-4 h-4" />
+              <span>Schedules</span>
+            </button>
+            <button
               onClick={openHistory}
               className="flex items-center gap-2 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-md hover:bg-secondary border border-transparent hover:border-border"
             >
@@ -129,6 +147,16 @@ const Index = () => {
       </header>
 
       <main className="w-full px-8 py-8">
+        {showSchedules && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-foreground">Automated Scans</h2>
+              <Button variant="outline" size="sm" onClick={() => setShowSchedules(false)}>Close</Button>
+            </div>
+            <ScheduleSettings />
+          </div>
+        )}
+
         {/* History Panel */}
         {showHistory && (
           <div className="space-y-4 mb-6">
