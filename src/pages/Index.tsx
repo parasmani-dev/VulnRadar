@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Terminal, Crosshair, Zap, Radio, History, ArrowLeftRight, Trash2, Download, FileJson, FileSpreadsheet, FileCode, File, FileText } from 'lucide-react';
+import { Terminal, Crosshair, Zap, Radio, History, ArrowLeftRight, Trash2, Download, FileJson, FileSpreadsheet, FileCode, File, FileText, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,13 @@ import ScanProgress from '@/components/ScanProgress';
 import ScanReport from '@/components/ScanReport';
 import ScanSkeleton from '@/components/ScanSkeleton';
 import ScanComparison from '@/components/ScanComparison';
+import WebhookSettings from '@/components/WebhookSettings';
 import { type ScanResult, SCAN_PHASES } from '@/lib/scanner-data';
 import { performRealScan } from '@/lib/scanner-api';
 import { saveScan, getHistory, clearHistory, type StoredScan } from '@/lib/scan-history';
 import { useToast } from '@/hooks/use-toast';
 import { exportToCsv, exportToJson, exportToMarkdown, exportToXml, exportToPdf } from '@/lib/export-utils';
+import { dispatchWebhooks } from '@/lib/webhook-utils';
 import vulnRadarLogo from '@/assets/vulnradar-logo.png';
 
 type ScanState = 'idle' | 'scanning' | 'complete' | 'error';
@@ -26,6 +28,7 @@ const Index = () => {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const [showWebhooks, setShowWebhooks] = useState(false);
   const [history, setHistory] = useState<StoredScan[]>([]);
   const [compareMode, setCompareMode] = useState(false);
   const [compareScans, setCompareScans] = useState<[ScanResult | null, ScanResult | null]>([null, null]);
@@ -48,6 +51,7 @@ const Index = () => {
     setResult(null);
     setErrorMsg('');
     setShowHistory(false);
+    setShowWebhooks(false);
     setCompareMode(false);
 
     try {
@@ -63,6 +67,7 @@ const Index = () => {
       setResult(scanResult);
       setScanState('complete');
       saveScan(scanResult);
+      dispatchWebhooks(scanResult);
       toast({ title: 'Scan Complete', description: `Found ${scanResult.vulnerabilities.length} findings for ${target}` });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Scan failed';
@@ -75,6 +80,14 @@ const Index = () => {
   const openHistory = () => {
     setHistory(getHistory());
     setShowHistory(true);
+    setShowWebhooks(false);
+    setCompareMode(false);
+    setCompareScans([null, null]);
+  };
+
+  const openWebhooks = () => {
+    setShowWebhooks(true);
+    setShowHistory(false);
     setCompareMode(false);
     setCompareScans([null, null]);
   };
@@ -113,6 +126,13 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-5">
             <button
+              onClick={openWebhooks}
+              className="flex items-center gap-2 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-md hover:bg-secondary border border-transparent hover:border-border"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Integrations</span>
+            </button>
+            <button
               onClick={openHistory}
               className="flex items-center gap-2 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-md hover:bg-secondary border border-transparent hover:border-border"
             >
@@ -129,6 +149,16 @@ const Index = () => {
       </header>
 
       <main className="w-full px-8 py-8">
+        {showWebhooks && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-foreground">Integrations</h2>
+              <Button variant="outline" size="sm" onClick={() => setShowWebhooks(false)}>Close</Button>
+            </div>
+            <WebhookSettings />
+          </div>
+        )}
+
         {/* History Panel */}
         {showHistory && (
           <div className="space-y-4 mb-6">
